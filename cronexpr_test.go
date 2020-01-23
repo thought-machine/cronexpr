@@ -15,6 +15,7 @@ package cronexpr
 /******************************************************************************/
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -24,6 +25,17 @@ import (
 type crontimes struct {
 	from string
 	next string
+}
+
+type dstLocationDates struct {
+	when  string
+	where string
+}
+
+type locationTestCase struct {
+	when     string
+	expected string // Expectation in UTC
+	where    string
 }
 
 type crontest struct {
@@ -215,6 +227,113 @@ func TestExpressions(t *testing.T) {
 }
 
 /******************************************************************************/
+var dstLocationTests = []dstLocationDates{
+	{"2019-03-31 00:00:00", "Europe/London"},
+	{"2019-10-27 00:00:00", "Europe/London"},
+	{"2019-03-31 00:00:00", "Europe/Paris"},
+	{"2019-10-27 00:00:00", "Europe/Paris"},
+	{"2019-03-10 00:00:00", "America/New_York"},
+	{"2019-11-03 00:00:00", "America/New_York"},
+	{"2019-03-10 00:00:00", "America/Los_Angeles"},
+	{"2019-11-03 00:00:00", "America/Los_Angeles"},
+	{"2019-03-10 00:00:00", "US/Pacific"},
+	{"2019-11-03 00:00:00", "US/Pacific"},
+	{"2019-03-31 00:00:00", "Asia/Shanghai"},  // Non-DST
+	{"2019-10-02 00:00:00", "Asia/Shanghai"},  // Non-DST
+	{"2019-03-31 00:00:00", "Asia/Hong_Kong"}, // Non-DST
+	{"2019-10-02 00:00:00", "Asia/Hong_Kong"}, // Non-DST
+	{"2019-04-05 00:00:00", "Australia/Melbourne"},
+	{"2019-10-04 00:00:00", "Australia/Melbourne"},
+	{"2019-03-31 00:00:00", "Australia/Perth"}, // Non-DST
+	{"2019-10-02 00:00:00", "Australia/Perth"}, // Non-DST
+	{"2019-03-22 00:00:00", "America/Asuncion"},
+	{"2019-10-04 00:00:00", "America/Asuncion"},
+}
+
+func TestHourlyExpressionsWithTimeZones(t *testing.T) {
+	for _, test := range dstLocationTests {
+		location, err := time.LoadLocation(test.where)
+		if err != nil {
+			t.Errorf("Invalid Test Location:%s", test.where)
+		}
+
+		from, _ := time.ParseInLocation("2006-01-02 15:04:05", test.when, location)
+		// Every 30 mins
+		expr, err := Parse("0 0/30 * * * * *")
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+		for j := 0; j < 6; j++ {
+			next := expr.Next(from)
+			diff := next.Sub(from)
+			if diff != time.Duration(30)*time.Minute {
+				t.Errorf(`DST changed failed for %s at %s. From:%s, To %s From:%s, To %s, diff %s`,
+					test.where, test.when, from, next, from.UTC(), next.UTC(), next.UTC().Sub(from.UTC()))
+			}
+			from = next
+		}
+	}
+}
+
+func TestSingleExpressionsWithTimeZones(t *testing.T) {
+	for _, test := range []dstLocationDates{
+		{"2019-03-31 01:30:00", "Europe/London"},
+		{"2019-10-27 01:30:00", "Europe/London"},
+		{"2019-03-31 01:30:00", "Europe/Paris"},
+		{"2019-10-02 01:30:00", "Europe/Paris"},
+		{"2019-03-10 01:30:00", "America/New_York"},
+		{"2019-11-03 01:30:00", "America/New_York"},
+		{"2019-03-10 01:30:00", "America/Los_Angeles"},
+		{"2019-11-03 01:30:00", "America/Los_Angeles"},
+		{"2019-03-10 01:30:00", "US/Pacific"},
+		{"2019-11-03 01:30:00", "US/Pacific"},
+	} {
+		location, err := time.LoadLocation(test.where)
+		if err != nil {
+			t.Errorf("Invalid Test Location:%s", test.where)
+		}
+		start, _ := time.ParseInLocation("2006-01-02 15:04:05", test.when, location)
+		expected := start.UTC().Add(30 * time.Minute)
+		// Every Hour
+		expr, err := Parse("0 0 * * * * *")
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+		next := expr.Next(start)
+		if !next.Equal(expected) {
+			t.Errorf(`Unexpected convertion at :%s, expected :%s, actual: %s from: %s`,
+				test.where, expected, next.UTC(), start.UTC())
+		}
+
+	}
+}
+
+func TestExpressionsWithTimeZones(t *testing.T) {
+	for nHourly := 1; nHourly < 12; nHourly++ {
+		for _, test := range dstLocationTests {
+			location, err := time.LoadLocation(test.where)
+			if err != nil {
+				t.Errorf("Invalid Test Location:%s", test.where)
+			}
+
+			from, _ := time.ParseInLocation("2006-01-02 15:04:05", test.when, location)
+
+			// At every n Hour
+			expr, err := Parse(fmt.Sprintf("0 0 */%v * * * *", nHourly))
+			if err != nil {
+				t.Errorf(err.Error())
+			}
+
+			next := expr.Next(from)
+			if !next.After(from) {
+				t.Errorf(`Interval %v DST changed failed for %s at %s. From:%s, To %s From:%s, To %s, diff %s`,
+					nHourly, test.where, test.when, from, next, from.UTC(), next.UTC(), next.UTC().Sub(from.UTC()))
+			}
+		}
+	}
+}
+
+/******************************************************************************/
 
 func TestZero(t *testing.T) {
 	from, _ := time.Parse("2006-01-02", "2013-08-31")
@@ -233,8 +352,6 @@ func TestZero(t *testing.T) {
 		t.Error(`("* * * * * 2014").Next(time.Time{}).IsZero() returned 'true', expected 'false'`)
 	}
 }
-
-/******************************************************************************/
 
 func TestNextN(t *testing.T) {
 	expected := []string{
