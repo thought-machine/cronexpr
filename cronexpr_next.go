@@ -130,11 +130,7 @@ func (expr *Expression) nextHour(t time.Time) time.Time {
 	}
 
 	// As the absolute hour will change, Need to get dt.
-	lastHour := 0
-	if i > 0 {
-		lastHour = expr.hourList[i-1]
-	}
-	incHours := expr.hourList[i] - lastHour
+	incHours := expr.hourList[i] - t.Hour()
 
 	residuals := time.Duration(expr.minuteList[0])*time.Minute +
 		time.Duration(expr.secondList[0])*time.Second
