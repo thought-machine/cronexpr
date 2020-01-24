@@ -129,11 +129,11 @@ func (expr *Expression) nextHour(t time.Time) time.Time {
 		return expr.nextDayOfMonth(t)
 	}
 
+	// As the absolute hour will change, Need to get dt.
 	lastHour := 0
 	if i > 0 {
 		lastHour = expr.hourList[i-1]
 	}
-
 	incHours := expr.hourList[i] - lastHour
 
 	residuals := time.Duration(expr.minuteList[0])*time.Minute +
@@ -175,14 +175,8 @@ func (expr *Expression) nextSecond(t time.Time) time.Time {
 		return expr.nextMinute(t)
 	}
 
-	//Could be first index or it could be another index
-	lastSecond := 0
-	if i > 0 {
-		lastSecond = expr.secondList[i-1]
-	}
-
-	incSeconds := expr.secondList[i] - lastSecond
-	return t.Add(time.Duration(incSeconds) * time.Second).
+	return t.Truncate(time.Minute).
+		Add(time.Duration(expr.secondList[i]) * time.Second).
 		Truncate(time.Second)
 }
 
