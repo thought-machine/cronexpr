@@ -129,15 +129,16 @@ func (expr *Expression) nextHour(t time.Time) time.Time {
 		return expr.nextDayOfMonth(t)
 	}
 
-	return time.Date(
-		t.Year(),
-		t.Month(),
-		t.Day(),
-		expr.hourList[i],
-		expr.minuteList[0],
-		expr.secondList[0],
-		0,
-		t.Location())
+	// As the absolute hour will change, Need to get dt.
+	incHours := expr.hourList[i] - t.Hour()
+
+	residuals := time.Duration(expr.minuteList[0])*time.Minute +
+		time.Duration(expr.secondList[0])*time.Second
+
+	return t.Add(time.Duration(incHours) * time.Hour).
+		Truncate(time.Hour).
+		Add(residuals)
+
 }
 
 /******************************************************************************/
@@ -150,15 +151,11 @@ func (expr *Expression) nextMinute(t time.Time) time.Time {
 		return expr.nextHour(t)
 	}
 
-	return time.Date(
-		t.Year(),
-		t.Month(),
-		t.Day(),
-		t.Hour(),
-		expr.minuteList[i],
-		expr.secondList[0],
-		0,
-		t.Location())
+	residuals := time.Duration(expr.secondList[0]) * time.Second
+	return t.Truncate(time.Hour).
+		Add(time.Duration(expr.minuteList[i]) * time.Minute).
+		Truncate(time.Minute).
+		Add(residuals)
 }
 
 /******************************************************************************/
@@ -174,15 +171,9 @@ func (expr *Expression) nextSecond(t time.Time) time.Time {
 		return expr.nextMinute(t)
 	}
 
-	return time.Date(
-		t.Year(),
-		t.Month(),
-		t.Day(),
-		t.Hour(),
-		t.Minute(),
-		expr.secondList[i],
-		0,
-		t.Location())
+	return t.Truncate(time.Minute).
+		Add(time.Duration(expr.secondList[i]) * time.Second).
+		Truncate(time.Second)
 }
 
 /******************************************************************************/
