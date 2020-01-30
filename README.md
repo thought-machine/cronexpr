@@ -72,13 +72,13 @@ Other details
 
 Install
 -------
-    go get github.com/gorhill/cronexpr
+    go get github.com/thought-machine/cronexpr
 
 Usage
 -----
 Import the library:
 
-    import "github.com/gorhill/cronexpr"
+    import "github.com/thought-machine/cronexpr"
     import "time"
 
 Simplest way:
@@ -122,7 +122,7 @@ returned.
 
 API
 ---
-<http://godoc.org/github.com/gorhill/cronexpr>
+<http://godoc.org/github.com/thought-machine/cronexpr>
 
 License
 -------
