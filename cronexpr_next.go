@@ -108,7 +108,7 @@ func (expr *Expression) nextDayOfMonth(t time.Time) time.Time {
 		return expr.nextMonth(t)
 	}
 
-	return time.Date(
+	newTime := time.Date(
 		t.Year(),
 		t.Month(),
 		expr.actualDaysOfMonthList[i],
@@ -117,6 +117,12 @@ func (expr *Expression) nextDayOfMonth(t time.Time) time.Time {
 		expr.secondList[0],
 		0,
 		t.Location())
+
+	// Fix for Daylight saving transition if first hour falls in the time jump
+	if newTime.Hour() < expr.hourList[0] {
+		newTime = newTime.Add(time.Duration(expr.hourList[0]-newTime.Hour()) * time.Hour).Truncate(time.Second)
+	}
+	return newTime
 }
 
 /******************************************************************************/

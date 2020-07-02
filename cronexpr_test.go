@@ -349,6 +349,40 @@ func TestExpressionsWithTimeZones(t *testing.T) {
 	}
 }
 
+var specificLocationTests = []locationTestCase{
+	{"2019-03-31 02:30:00","2019-04-01 02:30:00", "Europe/London"},
+	{"2019-10-27 02:30:00","2019-10-28 02:30:00", "Europe/London"},
+	{"2019-03-31 02:30:00","2019-04-01 02:30:00", "Europe/Paris"},
+	{"2019-10-27 02:30:00","2019-10-28 02:30:00", "Europe/Paris"},
+	{"2019-03-09 02:30:00","2019-03-10 01:30:00", "America/New_York"},
+	{"2019-11-03 02:30:00","2019-11-04 02:30:00", "America/New_York"},
+	{"2019-03-09 02:30:00","2019-03-10 01:30:00", "America/Los_Angeles"},
+	{"2019-11-03 02:30:00","2019-11-04 02:30:00", "America/Los_Angeles"},
+	{"2019-03-09 02:30:00","2019-03-10 01:30:00", "US/Pacific"},
+	{"2019-11-03 02:30:00","2019-11-04 02:30:00", "US/Pacific"},
+	{"2019-04-05 02:30:00","2019-04-06 02:30:00", "Australia/Melbourne"},
+	{"2019-10-04 02:30:00","2019-10-05 02:30:00", "Australia/Melbourne"},
+	{"2019-10-04 02:30:00","2019-10-05 02:30:00", "America/Asuncion"},
+}
+func TestDailyExpressionsWithTimeZones(t *testing.T) {
+	for _, test := range specificLocationTests {
+		location, err := time.LoadLocation(test.where)
+		if err != nil {
+			t.Errorf("Invalid Test Location:%s", test.where)
+		}
+
+		from, _ := time.ParseInLocation("2006-01-02 15:04:05", test.when, location)
+		to, _ := time.ParseInLocation("2006-01-02 15:04:05", test.expected, location)
+		// Every 30 mins
+		expr, err := Parse("0 30 2 * * * *")
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+		if expr.Next(from) != to{
+			t.Errorf("Expected Next time to be %s from %s in %s, when actually %s",to, from, test.where,expr.Next(from) )
+		}
+	}
+}
 /******************************************************************************/
 
 func TestZero(t *testing.T) {
