@@ -350,20 +350,23 @@ func TestExpressionsWithTimeZones(t *testing.T) {
 }
 
 var specificLocationTests = []locationTestCase{
-	{"2019-03-31 02:30:00","2019-04-01 02:30:00", "Europe/London"},
-	{"2019-10-27 02:30:00","2019-10-28 02:30:00", "Europe/London"},
-	{"2019-03-31 02:30:00","2019-04-01 02:30:00", "Europe/Paris"},
-	{"2019-10-27 02:30:00","2019-10-28 02:30:00", "Europe/Paris"},
-	{"2019-03-09 02:30:00","2019-03-10 01:30:00", "America/New_York"},
-	{"2019-11-03 02:30:00","2019-11-04 02:30:00", "America/New_York"},
-	{"2019-03-09 02:30:00","2019-03-10 01:30:00", "America/Los_Angeles"},
-	{"2019-11-03 02:30:00","2019-11-04 02:30:00", "America/Los_Angeles"},
-	{"2019-03-09 02:30:00","2019-03-10 01:30:00", "US/Pacific"},
-	{"2019-11-03 02:30:00","2019-11-04 02:30:00", "US/Pacific"},
-	{"2019-04-05 02:30:00","2019-04-06 02:30:00", "Australia/Melbourne"},
-	{"2019-10-04 02:30:00","2019-10-05 02:30:00", "Australia/Melbourne"},
-	{"2019-10-04 02:30:00","2019-10-05 02:30:00", "America/Asuncion"},
+	{"2019-03-31 02:30:00", "2019-04-01T02:30:00+01:00", "Europe/London"},
+	{"2019-10-27 02:30:00", "2019-10-28T02:30:00Z", "Europe/London"},
+	{"2019-03-31 02:30:00", "2019-04-01T02:30:00+02:00", "Europe/Paris"},
+	{"2019-10-27 02:30:00", "2019-10-28T02:30:00+01:00", "Europe/Paris"},
+	{"2019-03-09 02:30:00", "2019-03-10T02:30:00-05:00", "America/New_York"},
+	{"2019-03-10 03:30:00", "2019-03-11T02:30:00-04:00", "America/New_York"},
+	{"2019-11-03 02:30:00", "2019-11-04T02:30:00-05:00", "America/New_York"},
+	{"2019-11-04 02:30:00", "2019-11-05T02:30:00-05:00", "America/New_York"},
+	{"2019-03-09 02:30:00", "2019-03-10T02:30:00-08:00", "America/Los_Angeles"},
+	{"2019-11-03 02:30:00", "2019-11-04T02:30:00-08:00", "America/Los_Angeles"},
+	{"2019-03-09 02:30:00", "2019-03-10T03:30:00-07:00", "US/Pacific"},
+	{"2019-11-03 02:30:00", "2019-11-04T02:30:00-08:00", "US/Pacific"},
+	{"2019-04-05 02:30:00", "2019-04-06T02:30:00+11:00", "Australia/Melbourne"},
+	{"2019-10-04 02:30:00", "2019-10-05T02:30:00+10:00", "Australia/Melbourne"},
+	{"2019-10-04 02:30:00", "2019-10-05T02:30:00-04:00", "America/Asuncion"},
 }
+
 func TestDailyExpressionsWithTimeZones(t *testing.T) {
 	for _, test := range specificLocationTests {
 		location, err := time.LoadLocation(test.where)
@@ -372,17 +375,18 @@ func TestDailyExpressionsWithTimeZones(t *testing.T) {
 		}
 
 		from, _ := time.ParseInLocation("2006-01-02 15:04:05", test.when, location)
-		to, _ := time.ParseInLocation("2006-01-02 15:04:05", test.expected, location)
+		to, _ := time.Parse(time.RFC3339, test.expected)
 		// Every 30 mins
 		expr, err := Parse("0 30 2 * * * *")
 		if err != nil {
 			t.Errorf(err.Error())
 		}
-		if expr.Next(from) != to{
-			t.Errorf("Expected Next time to be %s from %s in %s, when actually %s",to, from, test.where,expr.Next(from) )
+		if expr.Next(from).UTC() != to.UTC() {
+			t.Errorf("Expected Next time to be %s from %s in %s, when actually %s; UTC FROM %s, UTC TO:%s ", to, from, test.where, expr.Next(from), from.UTC(), expr.Next(from).UTC())
 		}
 	}
 }
+
 /******************************************************************************/
 
 func TestZero(t *testing.T) {
