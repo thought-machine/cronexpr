@@ -371,6 +371,25 @@ func TestExpressionsWithTimeZones(t *testing.T) {
 	}
 }
 
+func TestExpressionWithNonTrivialTimeZone(t *testing.T) {
+	location, err := time.LoadLocation("Asia/Calcutta")
+	cronExp := "0 59 23 1 9 * 2023" // At 11:59 PM, on day 1 of the month, only in September, only in 2023
+
+	startTimeDST := time.Date(2023, time.September, 1, 23, 58, 0, 0, location)
+
+	parsedExpression, err := Parse(cronExp)
+	if err != nil {
+		t.Errorf(`Failed to parse cron expression, error: %s`, err.Error())
+	}
+
+	nextTime := parsedExpression.Next(startTimeDST)
+	expectedNextTime := startTimeDST.Add(1*time.Minute)
+	if nextTime.Unix() != expectedNextTime.Unix() {
+		t.Errorf(`Incorrect next time. Want: %s, got: %s`, expectedNextTime, nextTime)
+	}
+}
+
+
 var specificLocationTests = []locationTestCase{
 	{"2019-03-31 02:30:00", "2019-04-01T02:30:00+01:00", "Europe/London"},
 	{"2019-10-27 02:30:00", "2019-10-28T02:30:00Z", "Europe/London"},
