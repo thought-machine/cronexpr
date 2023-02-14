@@ -287,3 +287,18 @@ func workdayOfMonth(targetDom, lastDom time.Time) int {
 	}
 	return dom
 }
+
+func sortContains(a []int, x int) bool {
+	i := sort.SearchInts(a, x)
+	return i < len(a) && a[i] == x
+}
+
+func timeZoneInDay(t time.Time) bool {
+	if t.Location() == time.UTC {
+		return false
+	}
+
+	_, off := t.AddDate(0, 0, -1).Zone()
+	_, ndoff := t.AddDate(0, 0, 1).Zone()
+	return off != ndoff
+}
