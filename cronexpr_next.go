@@ -203,6 +203,17 @@ func (expr *Expression) calculateActualDaysOfMonth(year, month int) []int {
 	// day-of-month != `*`
 	if expr.daysOfMonthRestricted {
 		// Last day of month
+		if expr.lastNthDayOfMonth != 0 {
+			if expr.lastNthDayOfMonth <= lastDayOfMonth.Day() {
+				lastDayOfMonth = lastDayOfMonth.AddDate(0, 0, -expr.lastNthDayOfMonth)
+
+			} else {
+				// If lastNthDayOfMonth is greater than the last day of the month,
+				// set the last day of the month to the first day of the month
+				lastDayOfMonth = firstDayOfMonth
+			}
+			actualDaysOfMonthMap[lastDayOfMonth.Day()] = true
+		}
 		if expr.lastDayOfMonth {
 			actualDaysOfMonthMap[lastDayOfMonth.Day()] = true
 		}
@@ -262,6 +273,7 @@ func (expr *Expression) calculateActualDaysOfMonth(year, month int) []int {
 				actualDaysOfMonthMap[v] = true
 			}
 		}
+
 	}
 
 	return toList(actualDaysOfMonthMap)

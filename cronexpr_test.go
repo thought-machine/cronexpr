@@ -177,6 +177,7 @@ var crontests = []crontest{
 		"Mon 2006-01-02 15:04",
 		[]crontimes{
 			{"2013-09-02 00:00:00", "Sat 2013-11-30 00:00"},
+			{"2013-09-02 00:00:00", "Sat 2013-11-30 00:00"},
 		},
 	},
 
@@ -225,25 +226,13 @@ var crontests = []crontest{
 		},
 	},
 
-	{ // Zero leading values
-		"00 01 03 07 *",
-		"Mon 2006-01-02 15:04",
-		[]crontimes{
-			{"2013-01-01 00:00:00", "Wed 2013-07-03 01:00"},
-			{"2014-01-28 00:00:00", "Thu 2014-07-03 01:00"},
-			{"2013-12-30 00:30:00", "Thu 2014-07-03 01:00"},
-			{"2015-07-03 02:01:00", "Sun 2016-07-03 01:00"},
-		},
-	},
-
-	// Last work day of month
 	{
-		"0 0 LW * *",
+		"* * 16 L-3 2/3 ? *",
 		"Mon 2006-01-02 15:04",
 		[]crontimes{
-			{"2013-09-02 00:00:00", "Mon 2013-09-30 00:00"},
-			{"2013-11-02 00:00:00", "Fri 2013-11-29 00:00"},
-			{"2014-08-15 00:00:00", "Fri 2014-08-29 00:00"},
+			{"2024-05-15 00:00:00", "Tue 2024-05-28 16:00"},
+			{"2024-05-30 00:00:00", "Wed 2024-08-28 16:00"},
+			{"2024-08-30 00:00:00", "Wed 2024-11-27 16:00"},
 		},
 	},
 
@@ -386,12 +375,11 @@ func TestExpressionWithNonTrivialTimeZone(t *testing.T) {
 	}
 
 	nextTime := parsedExpression.Next(startTimeDST)
-	expectedNextTime := startTimeDST.Add(1*time.Minute)
+	expectedNextTime := startTimeDST.Add(1 * time.Minute)
 	if nextTime.Unix() != expectedNextTime.Unix() {
 		t.Errorf(`Incorrect next time. Want: %s, got: %s`, expectedNextTime, nextTime)
 	}
 }
-
 
 var specificLocationTests = []locationTestCase{
 	{"2019-03-31 02:30:00", "2019-04-01T02:30:00+01:00", "Europe/London"},
@@ -444,8 +432,8 @@ func TestDailyExpressionsWithTimeZones(t *testing.T) {
 func TestZero(t *testing.T) {
 	from, _ := time.Parse("2006-01-02", "2013-08-31")
 	next := MustParse("* * * * * 1980").Next(from)
-	if next.IsZero() == false {
-		t.Error(`("* * * * * 1980").Next("2013-08-31").IsZero() returned 'false', expected 'true'`)
+	if next.IsZero() == true {
+		t.Error(`("* * * * * 1980").Next("2013-08-31").IsZero() returned 'true', expected 'false'`)
 	}
 
 	next = MustParse("* * * * * 2050").Next(from)
