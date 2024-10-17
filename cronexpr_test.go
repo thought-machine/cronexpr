@@ -247,7 +247,38 @@ var crontests = []crontest{
 		},
 	},
 
-	// TODO: more tests
+	// After 2099 tests
+	{
+		"* * * * * * *",       // Expression to test every second
+		"2099-12-31 23:59:59", // Start date before 2099 ends
+		[]crontimes{
+			{"2099-12-31 23:59:59", "2100-01-01 00:00:00"}, // Next run is in 2100
+			{"2100-01-01 00:00:00", "2100-01-01 00:00:01"}, // Continue into the future
+		},
+	},
+	{
+		"0 0 1 1 *",           // Expression for yearly run on Jan 1st
+		"2099-01-01 00:00:00", // Starting from 2099
+		[]crontimes{
+			{"2099-01-01 00:00:00", "2100-01-01 00:00:00"}, // Next occurrence is in 2100
+			{"2100-01-01 00:00:00", "2101-01-01 00:00:00"}, // And so on...
+		},
+	},
+	{
+		"0 0 L * *",           // Last day of the month
+		"2099-12-01 00:00:00", // Starting in December 2099
+		[]crontimes{
+			{"2099-12-01 00:00:00", "2099-12-31 00:00:00"}, // Next occurrence is the last day of 2099
+			{"2099-12-31 00:00:00", "2100-01-31 00:00:00"}, // Then January 2100
+		},
+	},
+	{
+		"0 0 1 1 *",           // Expression for yearly run on Jan 1st
+		"2100-01-01 00:00:00", // Starting from 2100
+		[]crontimes{
+			{"2100-01-01 00:00:00", "2101-01-01 00:00:00"}, // Testing beyond 2100
+		},
+	},
 }
 
 func TestExpressions(t *testing.T) {
@@ -386,12 +417,11 @@ func TestExpressionWithNonTrivialTimeZone(t *testing.T) {
 	}
 
 	nextTime := parsedExpression.Next(startTimeDST)
-	expectedNextTime := startTimeDST.Add(1*time.Minute)
+	expectedNextTime := startTimeDST.Add(1 * time.Minute)
 	if nextTime.Unix() != expectedNextTime.Unix() {
 		t.Errorf(`Incorrect next time. Want: %s, got: %s`, expectedNextTime, nextTime)
 	}
 }
-
 
 var specificLocationTests = []locationTestCase{
 	{"2019-03-31 02:30:00", "2019-04-01T02:30:00+01:00", "Europe/London"},
