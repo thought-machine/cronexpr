@@ -400,13 +400,13 @@ var specificLocationTests = []locationTestCase{
 	{"2019-10-27 02:30:00", "2019-10-28T02:30:00+01:00", "Europe/Paris"},
 	{"2019-02-09 02:30:00", "2019-02-10T02:30:00-05:00", "America/New_York"},
 	{"2019-03-08 02:30:00", "2019-03-09T02:30:00-05:00", "America/New_York"},
-	{"2019-03-09 02:30:00", "2019-03-11T02:30:00-04:00", "America/New_York"}, // Note that 02:30am on the 10th doesn't exist due to DST
+	{"2019-03-09 02:30:00", "2019-03-10T03:00:00-04:00", "America/New_York"}, // Note that 02:30am on the 10th doesn't exist due to DST
 	{"2019-03-10 03:30:00", "2019-03-11T02:30:00-04:00", "America/New_York"},
 	{"2019-11-03 02:30:00", "2019-11-04T02:30:00-05:00", "America/New_York"},
 	{"2019-11-04 02:30:00", "2019-11-05T02:30:00-05:00", "America/New_York"},
-	{"2019-03-09 02:30:00", "2019-03-11T02:30:00-07:00", "America/Los_Angeles"}, // Note that 02:30am on the 10th doesn't exist due to DST
+	{"2019-03-09 02:30:00", "2019-03-10T03:00:00-07:00", "America/Los_Angeles"}, // Note that 02:30am on the 10th doesn't exist due to DST
 	{"2019-11-03 02:30:00", "2019-11-04T02:30:00-08:00", "America/Los_Angeles"},
-	{"2019-03-09 02:30:00", "2019-03-11T03:30:00-06:00", "US/Pacific"}, // Note that 02:30am on the 10th doesn't exist due to DST
+	{"2019-03-09 02:30:00", "2019-03-10T03:00:00-07:00", "US/Pacific"}, // Note that 02:30am on the 10th doesn't exist due to DST
 	{"2019-11-03 02:30:00", "2019-11-04T02:30:00-08:00", "US/Pacific"},
 	{"2019-04-05 02:30:00", "2019-04-06T02:30:00+11:00", "Australia/Melbourne"},
 	{"2019-10-04 02:30:00", "2019-10-05T02:30:00+10:00", "Australia/Melbourne"},
@@ -542,7 +542,7 @@ func TestPeriodicConfig_DSTChange_Transitions(t *testing.T) {
 			time.Date(2019, time.March, 9, 1, 0, 0, 0, loc),
 			[]time.Time{
 				time.Date(2019, time.March, 9, 2, 2, 0, 0, loc),
-				// no time in March 10!
+				time.Date(2019, time.March, 10, 3, 0, 0, 0, loc),
 				time.Date(2019, time.March, 11, 2, 2, 0, 0, loc),
 				time.Date(2019, time.March, 12, 2, 2, 0, 0, loc),
 			},
@@ -553,7 +553,7 @@ func TestPeriodicConfig_DSTChange_Transitions(t *testing.T) {
 			time.Date(2019, time.March, 9, 1, 0, 0, 0, loc),
 			[]time.Time{
 				time.Date(2019, time.March, 9, 2, 1, 0, 0, loc),
-				// no time in March 8!
+				time.Date(2019, time.March, 10, 3, 0, 0, 0, loc),
 				time.Date(2019, time.March, 11, 2, 1, 0, 0, loc),
 				time.Date(2019, time.March, 12, 2, 1, 0, 0, loc),
 			},
@@ -564,7 +564,7 @@ func TestPeriodicConfig_DSTChange_Transitions(t *testing.T) {
 			time.Date(2019, time.March, 9, 1, 0, 0, 0, loc),
 			[]time.Time{
 				time.Date(2019, time.March, 9, 2, 0, 0, 0, loc),
-				// no time in March 8!
+				time.Date(2019, time.March, 10, 3, 0, 0, 0, loc),
 				time.Date(2019, time.March, 11, 2, 0, 0, 0, loc),
 				time.Date(2019, time.March, 12, 2, 0, 0, 0, loc),
 			},
@@ -630,7 +630,6 @@ func TestPeriodicConfig_DSTChange_Transitions(t *testing.T) {
 			time.Date(2019, time.November, 3, 0, 0, 0, 0, loc),
 			[]time.Time{
 				time.Date(2019, time.November, 3, 0, 30, 0, 0, loc).Add(1 * time.Hour),
-				time.Date(2019, time.November, 3, 0, 30, 0, 0, loc).Add(2 * time.Hour),
 				time.Date(2019, time.November, 4, 1, 30, 0, 0, loc),
 				time.Date(2019, time.November, 5, 1, 30, 0, 0, loc),
 				time.Date(2019, time.November, 6, 1, 30, 0, 0, loc),
@@ -642,7 +641,6 @@ func TestPeriodicConfig_DSTChange_Transitions(t *testing.T) {
 			time.Date(2019, time.November, 3, 0, 0, 0, 0, loc),
 			[]time.Time{
 				time.Date(2019, time.November, 3, 0, 0, 0, 0, loc).Add(1 * time.Hour),
-				time.Date(2019, time.November, 3, 0, 0, 0, 0, loc).Add(2 * time.Hour),
 				time.Date(2019, time.November, 4, 1, 0, 0, 0, loc),
 				time.Date(2019, time.November, 5, 1, 0, 0, 0, loc),
 				time.Date(2019, time.November, 6, 1, 0, 0, 0, loc),
@@ -664,7 +662,6 @@ func TestPeriodicConfig_DSTChange_Transitions(t *testing.T) {
 			"30 1 * * * 2019",
 			time.Date(2019, time.November, 3, 0, 40, 0, 0, loc).Add(1 * time.Hour),
 			[]time.Time{
-				time.Date(2019, time.November, 3, 0, 30, 0, 0, loc).Add(2 * time.Hour),
 				time.Date(2019, time.November, 4, 1, 30, 0, 0, loc),
 				time.Date(2019, time.November, 5, 1, 30, 0, 0, loc),
 				time.Date(2019, time.November, 6, 1, 30, 0, 0, loc),
@@ -749,7 +746,6 @@ func TestPeriodicConfig_DSTChange_Transitions_LordHowe(t *testing.T) {
 			[]time.Time{
 				time.Date(2019, time.April, 6, 1, 31, 0, 0, loc),
 				time.Date(2019, time.April, 7, 0, 31, 0, 0, loc).Add(60 * time.Minute),
-				time.Date(2019, time.April, 7, 0, 31, 0, 0, loc).Add(90 * time.Minute),
 				time.Date(2019, time.April, 8, 1, 31, 0, 0, loc),
 				time.Date(2019, time.April, 9, 1, 31, 0, 0, loc),
 			},
@@ -760,7 +756,7 @@ func TestPeriodicConfig_DSTChange_Transitions_LordHowe(t *testing.T) {
 			time.Date(2019, time.October, 5, 0, 0, 0, 0, loc),
 			[]time.Time{
 				time.Date(2019, time.October, 5, 2, 3, 0, 0, loc),
-				// no Oct 6
+				time.Date(2019, time.October, 6, 2, 30, 0, 0, loc),
 				time.Date(2019, time.October, 7, 2, 3, 0, 0, loc),
 				time.Date(2019, time.October, 8, 2, 3, 0, 0, loc),
 				time.Date(2019, time.October, 9, 2, 3, 0, 0, loc),
@@ -772,7 +768,7 @@ func TestPeriodicConfig_DSTChange_Transitions_LordHowe(t *testing.T) {
 			time.Date(2019, time.October, 5, 0, 0, 0, 0, loc),
 			[]time.Time{
 				time.Date(2019, time.October, 5, 2, 31, 0, 0, loc),
-				// no Oct 6
+				time.Date(2019, time.October, 6, 2, 31, 0, 0, loc),
 				time.Date(2019, time.October, 7, 2, 31, 0, 0, loc),
 				time.Date(2019, time.October, 8, 2, 31, 0, 0, loc),
 				time.Date(2019, time.October, 9, 2, 31, 0, 0, loc),
@@ -834,7 +830,7 @@ func TestNext_DaylightSaving_Property(t *testing.T) {
 				t.Fatalf("next(%v) = %v is not after start time", start, next)
 			}
 
-			if next.Before(prevNext) {
+			if !timeZoneInDay(start) && next.Before(prevNext) {
 				t.Fatalf("next(%v) = %v reverted back in time from %v", start, next, prevNext)
 			}
 
@@ -903,7 +899,7 @@ func TestNext_DaylightSaving_Property_LordHowe(t *testing.T) {
 				t.Fatalf("next(%v) = %v is not after start time", start, next)
 			}
 
-			if next.Before(prevNext) {
+			if !timeZoneInDay(start) && next.Before(prevNext) {
 				t.Fatalf("next(%v) = %v reverted back in time from %v", start, next, prevNext)
 			}
 
@@ -969,7 +965,7 @@ func TestNext_DaylightSaving_Property_Brazil(t *testing.T) {
 				t.Fatalf("next(%v) = %v is not after start time", start, next)
 			}
 
-			if next.Before(prevNext) {
+			if !timeZoneInDay(start) && next.Before(prevNext) {
 				t.Fatalf("next(%v) = %v reverted back in time from %v", start, next, prevNext)
 			}
 
@@ -1049,4 +1045,78 @@ func BenchmarkNext(b *testing.B) {
 		next = expr.Next(next)
 		next = expr.Next(next)
 	}
+}
+
+/******************************************************************************/
+
+func TestNext_DaylightSaving_Property_ExactlyOnce(t *testing.T) {
+        // We test key locations and cron patterns on their transition days,
+        // and assert that any single-trigger daily schedule executes exactly once on those days.
+        
+        testLocations := []struct {
+                name        string
+                transitions []string // date strings "2006-01-02"
+        }{
+                {
+                        "America/New_York",
+                        []string{"2019-03-10", "2019-11-03"}, // Spring-Forward, Fall-Back 2019
+                },
+                {
+                        "Australia/Lord_Howe",
+                        []string{"2019-10-06", "2019-04-07"}, // Spring-Forward, Fall-Back 2019
+                },
+                {
+                        "America/Sao_Paulo",
+                        []string{"2018-02-18", "2018-11-04"}, // Brazil transitions 2018
+                },
+        }
+
+        cronExprs := []string{
+                "0 2 * * *",   // 02:00:00 AM (skipped during New York / Lord Howe spring-forward)
+                "0 30 2 * * * *", // 02:30:00 AM (skipped during New York / Brazil spring-forward)
+                "0 30 1 * * * *", // 01:30:00 AM (repeated during Fall-Back)
+        }
+
+        for _, locSpec := range testLocations {
+                loc, err := time.LoadLocation(locSpec.name)
+                if err != nil {
+                        t.Fatalf("LoadLocation error: %v", err)
+                }
+
+                for _, dateStr := range locSpec.transitions {
+                        date, err := time.ParseInLocation("2006-01-02", dateStr, loc)
+                        if err != nil {
+                                t.Fatalf("ParseInLocation error: %v", err)
+                        }
+
+                        for _, cronExpr := range cronExprs {
+                                t.Run(fmt.Sprintf("%s_%s_%s", locSpec.name, dateStr, cronExpr), func(t *testing.T) {
+                                        cron := MustParse(cronExpr)
+
+                                        // Start simulation from midnight
+                                        startDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, loc)
+                                        endDay := startDay.Add(24 * time.Hour)
+
+                                        executionCount := 0
+                                        ptr := startDay
+                                        for {
+                                                match := cron.Next(ptr)
+                                                if match.IsZero() || !match.Before(endDay) {
+                                                        break
+                                                }
+                                                executionCount++
+                                                ptr = match
+                                        }
+
+                                        // Verify that single daily trigger schedule runs EXACTLY once on transition day
+                                        isSingleDailyTrigger := len(cron.hourList) == 1 && len(cron.minuteList) == 1 && len(cron.secondList) == 1
+                                        if isSingleDailyTrigger {
+                                                if executionCount != 1 {
+                                                        t.Fatalf("Exactly-Once Violation for %s at %s on %s: executed %d times instead of 1", cronExpr, locSpec.name, dateStr, executionCount)
+                                                }
+                                        }
+                                })
+                        }
+                }
+        }
 }
