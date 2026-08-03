@@ -281,14 +281,24 @@ SLOW_CLOCK:
 	// An hour may have 60 minutes, 30 minutes or 90 minutes;
 	// partial hours may "repeat"!
 
-	// --- Spring-Forward Mitigation (Transition Day Interceptor) ---
+	// Spring-Forward Mitigation (Transition Day Interceptor)
+	// On a spring-forward transition, a local hour (e.g. 2 AM) is skipped.
+	// Infrequent schedules (len(expr.hourList) < 24) falling in this skipped gap
+	// are caught up exactly at the transition boundary (the first second of the new offset).
 	t_start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
 	t_end := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, loc)
 	_, offset_start := t_start.Zone()
 	_, offset_end := t_end.Zone()
 
 	if len(expr.hourList) < 24 && offset_start < offset_end {
-		// Spring-Forward Transition Day
+		// Algorithm:
+		// 1. Find exact transition seconds (t_transition and t_before) using binary search.
+		// 2. Translate boundaries to wall-clock seconds from midnight: [sec_start, sec_end).
+		// 3. Scan schedule candidates chronologically:
+		//    - If candidate is in the skipped gap, map it directly to t_transition.
+		//    - Otherwise, construct candidateTime normally.
+		// 4. Exit early and return the first valid candidateTime after fromTime.
+
 		// Binary search to find the exact transition second
 		low := t_start.Unix()
 		high := t_end.Unix()
