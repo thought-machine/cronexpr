@@ -166,7 +166,16 @@ func (expr *Expression) Next(fromTime time.Time) time.Time {
 		return t
 	}
 
-	// Fall-Back Mitigation for infrequent (less-than-hourly) schedules
+	// Fall-Back DST Mitigation
+	// On a fall-back transition, a local hour (e.g. 1 AM) is repeated.
+	// Infrequent schedules falling in this duplicated gap are prevented from running twice.
+	//
+	// Algorithm:
+	// 1. Check if schedule is infrequent (len(expr.hourList) < 24) and on the same calendar day.
+	// 2. Detect offset drop (offset_t < offset_fromTime) moving from daylight to standard time.
+	// 3. Convert wall-clocks to seconds-of-the-day: sec_t and sec_from.
+	// 4. If sec_t <= sec_from, the wall-clock did not progress, confirming a duplicate second-pass.
+	// 5. Discard duplicate and recursively scan from the next calendar day.
 	if len(expr.hourList) < 24 {
 		if t.Year() == fromTime.Year() && t.Month() == fromTime.Month() && t.Day() == fromTime.Day() {
 			_, offset_t := t.Zone()
@@ -292,7 +301,8 @@ SLOW_CLOCK:
 
 	if len(expr.hourList) < 24 && offset_start < offset_end {
 		// Algorithm:
-		// 1. Find exact transition seconds (t_transition and t_before) using binary search.
+		// 1. Using binary search, find exact transition seconds: the first second of the
+		// 	  new offset (t_transition), and the last second of the old offset (t_before).
 		// 2. Translate boundaries to wall-clock seconds from midnight: [sec_start, sec_end).
 		// 3. Scan schedule candidates chronologically:
 		//    - If candidate is in the skipped gap, map it directly to t_transition.
