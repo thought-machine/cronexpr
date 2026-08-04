@@ -47,7 +47,7 @@ type Expression struct {
 /******************************************************************************/
 
 // MustParse returns a new Expression pointer. It expects a well-formed cron
-// expression. If a malformed cron expression is supplied, it will `panic`.
+// expression. If a malformed cron expression is supplied, it will 'panic'.
 // See <https://github.com/gorhill/cronexpr#implementation> for documentation
 // about what is a well-formed cron expression from this library's point of
 // view.
@@ -152,15 +152,49 @@ func roundTimeToNextSec(tm time.Time) time.Time {
 
 /******************************************************************************/
 
-// Next returns the closest time instant immediately following `fromTime` which
-// matches the cron expression `expr`.
+// Next returns the closest time instant immediately following 'fromTime' which
+// matches the cron expression 'expr'.
 //
-// The `time.Location` of the returned time instant is the same as that of
-// `fromTime`.
+// The 'time.Location' of the returned time instant is the same as that of
+// 'fromTime'.
 //
 // The zero value of time.Time is returned if no matching time instant exists
-// or if a `fromTime` is itself a zero value.
+// or if a 'fromTime' is itself a zero value.
 func (expr *Expression) Next(fromTime time.Time) time.Time {
+	t := expr.next(fromTime)
+	if t.IsZero() || fromTime.IsZero() {
+		return t
+	}
+
+	// Fall-Back DST Mitigation
+	// On a fall-back transition, a local hour (e.g. 1 AM) is repeated.
+	// Infrequent schedules falling in this duplicated gap are prevented from running twice.
+	//
+	// Algorithm:
+	// 1. Check if schedule is infrequent (len(expr.hourList) < 24) and on the same calendar day.
+	// 2. Detect offset drop (offset_t < offset_fromTime) moving from daylight to standard time.
+	// 3. Convert wall-clocks to seconds-of-the-day: sec_t and sec_from.
+	// 4. If sec_t <= sec_from, the wall-clock did not progress, confirming a duplicate second-pass.
+	// 5. Discard duplicate and recursively scan from the next calendar day.
+	if len(expr.hourList) < 24 {
+		if t.Year() == fromTime.Year() && t.Month() == fromTime.Month() && t.Day() == fromTime.Day() {
+			_, offset_t := t.Zone()
+			_, offset_fromTime := fromTime.Zone()
+			if offset_t < offset_fromTime {
+				sec_from := fromTime.Hour()*3600 + fromTime.Minute()*60 + fromTime.Second()
+				sec_t := t.Hour()*3600 + t.Minute()*60 + t.Second()
+				if sec_t <= sec_from {
+					// Redundant fallback match: discard and scan from the next calendar day
+					nextDay := time.Date(t.Year(), t.Month(), t.Day()+1, 0, 0, 0, 0, t.Location())
+					return expr.Next(nextDay)
+				}
+			}
+		}
+	}
+	return t
+}
+
+func (expr *Expression) next(fromTime time.Time) time.Time {
 	// Special case
 	if fromTime.IsZero() {
 		return fromTime
@@ -172,14 +206,14 @@ WRAP:
 
 	// Since expr.nextSecond()-expr.nextMonth() expects that the
 	// supplied time stamp is a perfect match to the underlying cron
-	// expression, and since this function is an entry point where `fromTime`
+	// expression, and since this function is an entry point where 'fromTime'
 	// does not necessarily matches the underlying cron expression,
 	// we first need to ensure supplied time stamp matches
 	// the cron expression. If not, this means the supplied time
 	// stamp falls in between matching time stamps, thus we move
 	// to closest future matching immediately upon encountering a mismatching
 	// time stamp.
-	
+
 	v := t.Year()
 	if i := sort.SearchInts(expr.yearList, v); i == len(expr.yearList) {
 		return time.Time{}
@@ -255,6 +289,72 @@ SLOW_CLOCK:
 	// daylight saving effect is here, where odd things happen:
 	// An hour may have 60 minutes, 30 minutes or 90 minutes;
 	// partial hours may "repeat"!
+
+	// Spring-Forward Mitigation (Transition Day Interceptor)
+	// On a spring-forward transition, a local hour (e.g. 2 AM) is skipped.
+	// Infrequent schedules (len(expr.hourList) < 24) falling in this skipped gap
+	// are caught up exactly at the transition boundary (the first second of the new offset).
+	t_start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
+	t_end := time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 0, loc)
+	_, offset_start := t_start.Zone()
+	_, offset_end := t_end.Zone()
+
+	if len(expr.hourList) < 24 && offset_start < offset_end {
+		// Algorithm:
+		// 1. Using binary search, find exact transition seconds: the first second of the
+		// 	  new offset (t_transition), and the last second of the old offset (t_before).
+		// 2. Translate boundaries to wall-clock seconds from midnight: [sec_start, sec_end).
+		// 3. Scan schedule candidates chronologically:
+		//    - If candidate is in the skipped gap, map it directly to t_transition.
+		//    - Otherwise, construct candidateTime normally.
+		// 4. Exit early and return the first valid candidateTime after fromTime.
+
+		// Binary search to find the exact transition second
+		low := t_start.Unix()
+		high := t_end.Unix()
+		for low+1 < high {
+			mid := (low + high) / 2
+			tm := time.Unix(mid, 0).In(loc)
+			_, off := tm.Zone()
+			if off == offset_end {
+				high = mid
+			} else {
+				low = mid
+			}
+		}
+		t_transition := time.Unix(high, 0).In(loc)
+		t_before := time.Unix(low, 0).In(loc)
+
+		// Define skipped window in wall-clock seconds of day
+		sec_start := t_before.Hour()*3600 + t_before.Minute()*60 + t_before.Second() + 1
+		sec_end := t_transition.Hour()*3600 + t_transition.Minute()*60 + t_transition.Second()
+
+		// Find the first valid execution time on this day
+		for _, h := range expr.hourList {
+			for _, m := range expr.minuteList {
+				for _, s := range expr.secondList {
+					sec_candidate := h*3600 + m*60 + s
+					var candidateTime time.Time
+					if sec_candidate >= sec_start && sec_candidate < sec_end {
+						// Skipped schedule -> run at transition boundary
+						candidateTime = t_transition
+					} else {
+						// Exists physically -> construct normally
+						candidateTime = time.Date(t.Year(), t.Month(), t.Day(), h, m, s, 0, loc)
+					}
+
+					if candidateTime.After(fromTime) {
+						return candidateTime
+					}
+				}
+			}
+		}
+
+		// If no matching time remaining on this day, jump to next day
+		nextDay := time.Date(t.Year(), t.Month(), t.Day()+1, 0, 0, 0, 0, loc)
+		return expr.Next(nextDay)
+	}
+
 	for !sortContains(expr.hourList, t.Hour()) {
 		hourBefore := t.Hour()
 		t = t.Add(time.Hour)
@@ -294,16 +394,16 @@ SLOW_CLOCK:
 
 /******************************************************************************/
 
-// NextN returns a slice of `n` closest time instants immediately following
-// `fromTime` which match the cron expression `expr`.
+// NextN returns a slice of 'n' closest time instants immediately following
+// 'fromTime' which match the cron expression 'expr'.
 //
 // The time instants in the returned slice are in chronological ascending order.
-// The `time.Location` of the returned time instants is the same as that of
-// `fromTime`.
+// The 'time.Location' of the returned time instants is the same as that of
+// 'fromTime'.
 //
-// A slice with len between [0-`n`] is returned, that is, if not enough existing
+// A slice with len between [0-'n'] is returned, that is, if not enough existing
 // matching time instants exist, the number of returned entries will be less
-// than `n`.
+// than 'n'.
 func (expr *Expression) NextN(fromTime time.Time, n uint) []time.Time {
 	nextTimes := make([]time.Time, 0, n)
 	if n > 0 {
